@@ -1,0 +1,15 @@
+{
+  "name": "dts-sample-function-chaining-js",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Durable Task Scheduler JavaScript sample: function chaining pattern",
+  "scripts": {
+    "worker": "node worker/index.mjs",
+    "client": "node client/index.mjs",
+    "test": "node tests/smoke.mjs"
+  },
+  "dependencies": {
+    "durabletask-js": "0.1.0-alpha.2"
+  }
+}
