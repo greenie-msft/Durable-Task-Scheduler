@@ -1,0 +1,102 @@
+[
+  {
+    "Id": "task-1",
+    "Title": "Project scaffolding",
+    "Description": "Initialize the loadtest CLI project under \u0060loadtest/\u0060. Create \u0060package.json\u0060 (with \u0060bin\u0060 entry pointing to \u0060dist/cli.js\u0060), \u0060tsconfig.json\u0060, \u0060.gitignore\u0060, and install dependencies: \u0060undici\u0060, \u0060commander\u0060, \u0060zod\u0060, \u0060cli-table3\u0060, \u0060ora\u0060, \u0060chalk\u0060. Also install dev deps: \u0060typescript\u0060, \u0060vitest\u0060, \u0060@types/node\u0060. Add npm scripts: \u0060build\u0060, \u0060dev\u0060, \u0060test\u0060, \u0060lint\u0060.",
+    "BranchName": "worker/task-1",
+    "Dependencies": [],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-2",
+    "Title": "Config types and validation",
+    "Description": "Create \u0060src/config.ts\u0060. Define and export a Zod schema (\u0060RunConfigSchema\u0060) covering: \u0060url\u0060 (URL string), \u0060method\u0060 (GET/POST/PUT/DELETE/PATCH, default GET), \u0060headers\u0060 (Record\u003Cstring,string\u003E), \u0060body\u0060 (optional string), \u0060vus\u0060 (number, default 10), \u0060duration\u0060 (string like \u002730s\u0027/\u00271m\u0027, parsed to ms), \u0060scenario\u0060 (constant|rampup|spike, default constant), \u0060rampDuration\u0060 (optional), \u0060maxVus\u0060 (optional), \u0060spikeDuration\u0060 (optional), \u0060output\u0060 (terminal|json|csv, default terminal), \u0060timeout\u0060 (default 30s). Export the inferred \u0060RunConfig\u0060 TypeScript type and a \u0060parseConfig\u0060 helper.",
+    "BranchName": "worker/task-2",
+    "Dependencies": [
+      "task-1"
+    ],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-3",
+    "Title": "HTTP request engine",
+    "Description": "Create \u0060src/engine.ts\u0060. Implement a \u0060RequestEngine\u0060 class backed by \u0060undici\u0060\u0027s \u0060Pool\u0060 for connection reuse. Expose an \u0060async fire(config: RunConfig): Promise\u003CRequestResult\u003E\u0060 method that measures wall-clock latency (using \u0060performance.now()\u0060), captures status code, and catches network errors. The \u0060RequestResult\u0060 type should include: \u0060latencyMs: number\u0060, \u0060statusCode: number | null\u0060, \u0060error: string | null\u0060, \u0060timestamp: number\u0060. Export the class and type.",
+    "BranchName": "worker/task-3",
+    "Dependencies": [
+      "task-2"
+    ],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-4",
+    "Title": "Metrics collector",
+    "Description": "Create \u0060src/metrics.ts\u0060. Implement a \u0060MetricsCollector\u0060 class with: \u0060record(result: RequestResult): void\u0060 to ingest each result, \u0060snapshot(): MetricsSummary\u0060 to compute aggregates (total/success/fail counts, RPS, latency percentiles p50/p90/p95/p99/max/mean/min using a sorted-array approach), and \u0060timeSeries(): TimeSeriesPoint[]\u0060 returning per-second buckets for CSV export. Export types \u0060MetricsSummary\u0060 and \u0060TimeSeriesPoint\u0060.",
+    "BranchName": "worker/task-4",
+    "Dependencies": [
+      "task-3"
+    ],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-5",
+    "Title": "Constant load scenario",
+    "Description": "Create \u0060src/scenarios/constant.ts\u0060. Implement \u0060runConstant(config: RunConfig, engine: RequestEngine, collector: MetricsCollector, onTick?: (summary: MetricsSummary) =\u003E void): Promise\u003CMetricsSummary\u003E\u0060. Spawn exactly \u0060config.vus\u0060 concurrent workers, each looping \u0060engine.fire()\u0060 \u2192 \u0060collector.record()\u0060 until the elapsed duration is reached. Call \u0060onTick\u0060 once per second with a live snapshot. Return the final summary.",
+    "BranchName": "worker/task-5",
+    "Dependencies": [
+      "task-4"
+    ],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-6",
+    "Title": "Ramp-up and spike scenarios",
+    "Description": "Create \u0060src/scenarios/rampup.ts\u0060 and \u0060src/scenarios/spike.ts\u0060. Ramp-up: linearly increase active VUs from 0 to \u0060maxVus\u0060 over \u0060rampDuration\u0060, then hold at \u0060maxVus\u0060 until total duration ends; manage a worker pool that grows over time. Spike: hold \u0060vus\u0060 baseline workers, at the midpoint instantly spawn \u0060maxVus\u0060 workers for \u0060spikeDuration\u0060, then drop back to baseline. Both share the same \u0060onTick\u0060 callback and return \u0060MetricsSummary\u0060. Export a \u0060runScenario(config, engine, collector, onTick)\u0060 dispatcher in \u0060src/scenarios/index.ts\u0060.",
+    "BranchName": "worker/task-6",
+    "Dependencies": [
+      "task-5"
+    ],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-7",
+    "Title": "Terminal reporter",
+    "Description": "Create \u0060src/reporter.ts\u0060. Implement: (1) \u0060LiveReporter\u0060 \u2014 uses \u0060ora\u0060 spinner updated each tick to show elapsed time, current RPS, and VU count; (2) \u0060printSummary(summary: MetricsSummary)\u0060 \u2014 renders a color-coded \u0060cli-table3\u0060 table with all metrics; (3) \u0060exportJson(summary: MetricsSummary): string\u0060 \u2014 returns a formatted JSON string; (4) \u0060exportCsv(points: TimeSeriesPoint[]): string\u0060 \u2014 returns a CSV string with headers \u0060timestamp,rps,p50,p99,errors\u0060. Wire output format selection based on \u0060config.output\u0060.",
+    "BranchName": "worker/task-7",
+    "Dependencies": [
+      "task-4"
+    ],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-8",
+    "Title": "CLI entry point",
+    "Description": "Create \u0060src/cli.ts\u0060 and \u0060src/index.ts\u0060. In \u0060cli.ts\u0060: use \u0060commander\u0060 to define a \u0060run\u0060 subcommand with all options matching \u0060RunConfigSchema\u0060 fields (\u0060--url\u0060, \u0060--method\u0060, \u0060--vus\u0060, \u0060--duration\u0060, \u0060--scenario\u0060, \u0060--ramp-duration\u0060, \u0060--max-vus\u0060, \u0060--spike-duration\u0060, \u0060--header\u0060 (repeatable), \u0060--body\u0060, \u0060--output\u0060, \u0060--timeout\u0060). Parse and validate with \u0060parseConfig\u0060, instantiate \u0060RequestEngine\u0060, \u0060MetricsCollector\u0060, \u0060LiveReporter\u0060, call \u0060runScenario\u0060, then render final output per \u0060config.output\u0060. Handle errors with a user-friendly message and non-zero exit code. Add \u0060#!/usr/bin/env node\u0060 shebang.",
+    "BranchName": "worker/task-8",
+    "Dependencies": [
+      "task-6",
+      "task-7"
+    ],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-9",
+    "Title": "Unit tests",
+    "Description": "Create \u0060tests/metrics.test.ts\u0060, \u0060tests/engine.test.ts\u0060, and \u0060tests/scenarios.test.ts\u0060 using \u0060vitest\u0060. Metrics tests: verify percentile calculations, RPS computation, and time-series bucketing with known inputs. Engine tests: mock \u0060undici\u0060 to verify latency capture, error handling, and status code recording. Scenario tests: mock engine to verify constant/rampup VU counts over time and that the collector receives the expected number of records. Aim for \u003E80% coverage on core modules.",
+    "BranchName": "worker/task-9",
+    "Dependencies": [
+      "task-6",
+      "task-7"
+    ],
+    "RoundNumber": 1
+  },
+  {
+    "Id": "task-10",
+    "Title": "README and documentation",
+    "Description": "Create \u0060loadtest/README.md\u0060 covering: project overview, installation (\u0060npm install -g\u0060 or \u0060npx\u0060), all CLI flags with descriptions and defaults, example commands (basic GET, POST with auth header, rampup scenario, JSON export), sample terminal output, output format explanations, and contributing notes. Update the root \u0060/repo/README.md\u0060 to mention the loadtest CLI under a new \u0027Tools\u0027 section.",
+    "BranchName": "worker/task-10",
+    "Dependencies": [
+      "task-8"
+    ],
+    "RoundNumber": 1
+  }
+]
