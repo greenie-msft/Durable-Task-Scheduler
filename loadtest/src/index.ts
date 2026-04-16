@@ -1,2 +1,3 @@
 // Public API re-exports
-export {};
+export { RequestEngine } from './engine.js';
+export type { RequestResult } from './engine.js';
