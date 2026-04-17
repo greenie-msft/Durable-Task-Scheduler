@@ -35,6 +35,21 @@ Durable Functions
 - [Java](https://learn.microsoft.com/java/api/com.microsoft.durabletask.azurefunctions?view=azure-java-stable)
 - [JavaScript](https://learn.microsoft.com/javascript/api/durable-functions/?view=azure-node-latest)
 
+## Tools
+
+### loadtest CLI
+
+A lightweight load-testing CLI for stress-testing HTTP endpoints — including Durable Task Scheduler orchestration endpoints. It supports constant, ramp-up, and spike load scenarios and reports throughput, latency percentiles (p50/p95/p99), and error rates in the terminal or as JSON/CSV exports.
+
+```bash
+# Quick start
+npx loadtest run --url https://api.example.com/start --vus 50 --duration 30s
+```
+
+See [`loadtest/README.md`](./loadtest/README.md) for full documentation, CLI flags, and examples.
+
+---
+
 ## Tell us what you think
 
 Your feedback is essential in shaping the future direction of this product. We encourage you to share your experiences, both the good and the bad. If there are any missing features or capabilities that you would like to see supported in the Durable Task Scheduler, we want to hear about them.
