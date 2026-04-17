@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { Command } from 'commander';
 import { parseConfig } from '../src/config.js';
 
 // ---------------------------------------------------------------------------
@@ -55,6 +56,159 @@ describe('CLI header parsing logic', () => {
     expect(parseHeaders([])).toEqual({});
   });
 });
+
+// ---------------------------------------------------------------------------
+// Commander option declaration tests
+// ---------------------------------------------------------------------------
+
+function buildTestProgram(): Command {
+  const program = new Command();
+  program.exitOverride();
+
+  const run = program
+    .command('run')
+    .requiredOption('--url <url>', 'Target URL')
+    .option('--method <method>', 'HTTP method', 'GET')
+    .option('--vus <number>', 'Virtual users', (v) => parseInt(v, 10), 10)
+    .option('--duration <duration>', 'Duration', '30s')
+    .option('--scenario <scenario>', 'Scenario', 'constant')
+    .option('--ramp-duration <duration>', 'Ramp duration')
+    .option('--max-vus <number>', 'Max VUs', (v) => parseInt(v, 10))
+    .option('--spike-duration <duration>', 'Spike duration')
+    .option(
+      '--header <header>',
+      'HTTP header',
+      (val: string, acc: string[]) => [...acc, val],
+      [] as string[],
+    )
+    .option('--body <body>', 'Request body')
+    .option('--output <format>', 'Output format', 'terminal')
+    .option('--timeout <duration>', 'Timeout', '30s');
+
+  run.action(() => {});
+  return program;
+}
+
+describe('CLI option declarations', () => {
+  it('accepts --url', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com']);
+    expect(p.commands[0].opts().url).toBe('https://example.com');
+  });
+
+  it('defaults --method to GET', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com']);
+    expect(p.commands[0].opts().method).toBe('GET');
+  });
+
+  it('accepts --method override', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com', '--method', 'POST']);
+    expect(p.commands[0].opts().method).toBe('POST');
+  });
+
+  it('defaults --vus to 10', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com']);
+    expect(p.commands[0].opts().vus).toBe(10);
+  });
+
+  it('parses --vus as integer', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com', '--vus', '50']);
+    expect(p.commands[0].opts().vus).toBe(50);
+  });
+
+  it('defaults --scenario to constant', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com']);
+    expect(p.commands[0].opts().scenario).toBe('constant');
+  });
+
+  it('accepts rampup scenario options', () => {
+    const p = buildTestProgram();
+    p.parse([
+      'node', 'cli', 'run',
+      '--url', 'https://example.com',
+      '--scenario', 'rampup',
+      '--ramp-duration', '10s',
+      '--max-vus', '100',
+    ]);
+    const opts = p.commands[0].opts();
+    expect(opts.scenario).toBe('rampup');
+    expect(opts.rampDuration).toBe('10s');
+    expect(opts.maxVus).toBe(100);
+  });
+
+  it('accepts spike scenario options', () => {
+    const p = buildTestProgram();
+    p.parse([
+      'node', 'cli', 'run',
+      '--url', 'https://example.com',
+      '--scenario', 'spike',
+      '--spike-duration', '5s',
+      '--max-vus', '200',
+    ]);
+    const opts = p.commands[0].opts();
+    expect(opts.scenario).toBe('spike');
+    expect(opts.spikeDuration).toBe('5s');
+    expect(opts.maxVus).toBe(200);
+  });
+
+  it('collects multiple --header flags', () => {
+    const p = buildTestProgram();
+    p.parse([
+      'node', 'cli', 'run',
+      '--url', 'https://example.com',
+      '--header', 'Authorization: Bearer token',
+      '--header', 'X-Custom: value',
+    ]);
+    expect(p.commands[0].opts().header).toEqual([
+      'Authorization: Bearer token',
+      'X-Custom: value',
+    ]);
+  });
+
+  it('defaults --header to empty array', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com']);
+    expect(p.commands[0].opts().header).toEqual([]);
+  });
+
+  it('accepts --body', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com', '--body', '{"key":"value"}']);
+    expect(p.commands[0].opts().body).toBe('{"key":"value"}');
+  });
+
+  it('defaults --output to terminal', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com']);
+    expect(p.commands[0].opts().output).toBe('terminal');
+  });
+
+  it('accepts --output json', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com', '--output', 'json']);
+    expect(p.commands[0].opts().output).toBe('json');
+  });
+
+  it('defaults --timeout to 30s', () => {
+    const p = buildTestProgram();
+    p.parse(['node', 'cli', 'run', '--url', 'https://example.com']);
+    expect(p.commands[0].opts().timeout).toBe('30s');
+  });
+
+  it('throws when --url is missing', () => {
+    const p = buildTestProgram();
+    expect(() => p.parse(['node', 'cli', 'run', '--duration', '5s'])).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CLI config assembly via parseConfig
+// ---------------------------------------------------------------------------
 
 describe('CLI config assembly', () => {
   it('assembles a valid minimal config from CLI-like options', () => {
@@ -119,9 +273,7 @@ describe('CLI config assembly', () => {
   });
 
   it('throws on invalid URL', () => {
-    expect(() =>
-      parseConfig({ url: 'not-a-url', duration: '5s' }),
-    ).toThrow();
+    expect(() => parseConfig({ url: 'not-a-url', duration: '5s' })).toThrow();
   });
 
   it('throws on invalid method', () => {
@@ -146,6 +298,10 @@ describe('CLI config assembly', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// CLI shebang and module checks
+// ---------------------------------------------------------------------------
+
 describe('CLI shebang and module', () => {
   it('cli.ts starts with #!/usr/bin/env node', async () => {
     const { readFileSync } = await import('node:fs');
@@ -156,6 +312,10 @@ describe('CLI shebang and module', () => {
     expect(src.startsWith('#!/usr/bin/env node')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// index.ts re-exports
+// ---------------------------------------------------------------------------
 
 describe('index.ts re-exports', () => {
   it('re-exports RequestEngine', async () => {
@@ -176,6 +336,11 @@ describe('index.ts re-exports', () => {
   it('re-exports parseConfig', async () => {
     const mod = await import('../src/index.js');
     expect(mod.parseConfig).toBeDefined();
+  });
+
+  it('re-exports parseDuration', async () => {
+    const mod = await import('../src/index.js');
+    expect(mod.parseDuration).toBeDefined();
   });
 
   it('re-exports RunConfigSchema', async () => {
