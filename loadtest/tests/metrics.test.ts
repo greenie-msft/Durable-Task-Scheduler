@@ -87,6 +87,20 @@ describe('MetricsCollector', () => {
       expect(collector.snapshot().latency.p50).toBe(30);
     });
 
+    it('computes p50 on even-length array', () => {
+      [10, 20, 30, 40].forEach((l, i) =>
+        collector.record(makeResult(l, 200, i * 100)),
+      );
+      // ceil((50/100)*4)-1 = ceil(2)-1 = 1 → index 1 → value 20
+      expect(collector.snapshot().latency.p50).toBe(20);
+    });
+
+    it('computes rps correctly with a single request (returns total as rps)', () => {
+      collector.record(makeResult(10, 200, 5000));
+      const s = collector.snapshot();
+      expect(s.rps).toBe(1);
+    });
+
     it('computes p90, p95, p99', () => {
       // 100 values: 1..100
       for (let i = 1; i <= 100; i++) {

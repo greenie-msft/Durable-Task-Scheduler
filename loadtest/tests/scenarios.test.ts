@@ -488,4 +488,12 @@ describe('runScenario', () => {
 
     expect(onTick).toHaveBeenCalled();
   });
+
+  it('throws for unknown scenario', async () => {
+    const config = makeConfig({ scenario: 'unknown' as RunConfig['scenario'] });
+    const engine = makeEngine();
+    const collector = new MetricsCollector();
+
+    await expect(runScenario(config, engine, collector)).rejects.toThrow('Unknown scenario: unknown');
+  });
 });
