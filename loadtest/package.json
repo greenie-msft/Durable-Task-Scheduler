@@ -10,6 +10,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^1.6.1",
     "typescript": "^5.4.0",
     "vitest": "^1.4.0"
   }
