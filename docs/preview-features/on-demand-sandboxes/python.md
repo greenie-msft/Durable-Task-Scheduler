@@ -2,6 +2,19 @@
 
 > **Status:** Private preview · [Back to overview](./README.md)
 
+> [!WARNING]
+> This is a preview feature. It is provided for evaluation purposes only and is
+> not intended or supported for production use. Functionality, APIs, and
+> behavior may change before general availability.
+
+> [!NOTE]
+> This feature is only available on schedulers in the following regions:
+>
+> - East US 2 (`eastus2`)
+> - West US 3 (`westus3`)
+> - North Europe (`northeurope`)
+> - Australia East (`australiaeast`)
+
 This guide walks through using On-demand Sandboxes with the **Python** Durable Task SDK.
 Make sure you've reviewed the [prerequisites](./README.md#prerequisites) first.
 
@@ -111,12 +124,23 @@ profiles with DTS so it can route those activities to the sandbox image.
 For the meaning, accepted values, and defaults of each profile option, see the
 [worker profile configuration reference](./README.md#worker-profile-configuration-reference).
 In short: `container_image` is the image with your activity implementations;
-`image_pull_managed_identity_client_id` / `scheduler_managed_identity_client_id` are the
-managed identity client IDs DTS uses to pull the image and start the sandbox; `cpu` /
+`image_pull_managed_identity_client_id` is the managed identity DTS uses to **pull the
+worker image** from your registry (needs **AcrPull**), while
+`scheduler_managed_identity_client_id` is the managed identity the **sandbox worker uses
+to connect back to DTS** and that the activity code runs as when it calls other services
+(you can use the same identity for both or split them); `cpu` /
 `memory` set the per-sandbox resource shape; `max_concurrent_activities` sets concurrency;
 `environment_variables` injects customer environment variables; and `add_activity(...)`
 selects the activities to offload (only added activities run in DTS-managed isolated
 compute; everything else stays in-process).
+
+> [!IMPORTANT]
+> The managed identities referenced by `image_pull_managed_identity_client_id` and
+> `scheduler_managed_identity_client_id` must both be attached to the scheduler. The
+> image-pull identity must have the **AcrPull** role on your container registry, and the
+> worker/scheduler identity must have whatever roles your activity code needs on the
+> downstream services it calls. See
+> [Configure the scheduler identity for image pull](./README.md#configure-the-scheduler-identity-for-image-pull).
 
 The orchestrator call site doesn't change—it calls `REMOTE_HELLO` the same way it would
 call any activity, and DTS routes it to the sandbox.

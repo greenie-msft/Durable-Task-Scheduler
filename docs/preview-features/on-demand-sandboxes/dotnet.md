@@ -2,6 +2,19 @@
 
 > **Status:** Private preview · [Back to overview](./README.md)
 
+> [!WARNING]
+> This is a preview feature. It is provided for evaluation purposes only and is
+> not intended or supported for production use. Functionality, APIs, and
+> behavior may change before general availability.
+
+> [!NOTE]
+> This feature is only available on schedulers in the following regions:
+>
+> - East US 2 (`eastus2`)
+> - West US 3 (`westus3`)
+> - North Europe (`northeurope`)
+> - Australia East (`australiaeast`)
+
 This guide walks through using On-demand Sandboxes with the **.NET** Durable Task SDK.
 Make sure you've reviewed the [prerequisites](./README.md#prerequisites) first.
 
